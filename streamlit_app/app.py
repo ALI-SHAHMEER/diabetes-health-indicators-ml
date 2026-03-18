@@ -1,109 +1,137 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import numpy as np
 
-# Load models
-binary_model = joblib.load('models/binary_model.joblib')
-multi_model = joblib.load('models/multiclass_model.joblib')
-reg_model = joblib.load('models/regression_model.joblib')
+@st.cache_resource
+def load_models():
+    binary  = joblib.load('models/binary_model.joblib')
+    multi   = joblib.load('models/multiclass_model.joblib')
+    reg     = joblib.load('models/regression_model.joblib')
+    encoder = joblib.load('models/stage_encoder.joblib')
+    features = joblib.load('models/feature_cols.joblib')
+    return binary, multi, reg, encoder, features
 
-stage_labels = {0: 'No Diabetes', 1: 'Pre-Diabetes',
-                2: 'Type 1', 3: 'Type 2', 4: 'Gestational'}
+binary_model, multi_model, reg_model, stage_encoder, feature_cols = load_models()
+
+# ── Verify on startup ──────────────────────────────
+st.sidebar.write("✅ Binary classes:", binary_model.classes_.tolist())
+st.sidebar.write("✅ Features expected:", binary_model.n_features_in_)
 
 st.title("🩺 Diabetes Health Indicators Predictor")
-tab1, tab2, tab3 = st.tabs(["Binary Classification", "Stage Prediction", "Risk Score"])
+tab1, tab2, tab3 = st.tabs(["Binary", "Stage", "Risk Score"])
 
-# ✅ Pass a unique 'tab' prefix to every widget key
 def get_inputs(tab):
     col1, col2 = st.columns(2)
     with col1:
-        age = st.slider("Age", 18, 90, 45, key=f"age_{tab}")
-        bmi = st.number_input("BMI", 10.0, 60.0, 25.0, key=f"bmi_{tab}")
-        glucose = st.number_input("Fasting Glucose", 50, 300, 100, key=f"glucose_{tab}")
-        hba1c = st.number_input("HbA1c", 3.0, 15.0, 5.5, key=f"hba1c_{tab}")
-        systolic_bp = st.number_input("Systolic BP", 80, 200, 120, key=f"sys_bp_{tab}")
-        diastolic_bp = st.number_input("Diastolic BP", 50, 130, 80, key=f"dia_bp_{tab}")
-        cholesterol = st.number_input("Total Cholesterol", 100, 400, 200, key=f"chol_{tab}")
+        age     = st.slider("Age", 18, 90, 45,          key=f"age_{tab}")
+        bmi     = st.number_input("BMI", 10.0, 60.0, 25.0,      key=f"bmi_{tab}")
+        glucose = st.number_input("Fasting Glucose", 50, 300, 95, key=f"gluc_{tab}")
+        hba1c   = st.number_input("HbA1c", 3.0, 15.0, 5.4,      key=f"hba1c_{tab}")
+        sys_bp  = st.number_input("Systolic BP", 80, 200, 120,   key=f"sys_{tab}")
+        dia_bp  = st.number_input("Diastolic BP", 50, 130, 80,   key=f"dia_{tab}")
+        chol    = st.number_input("Total Cholesterol", 100, 400, 190, key=f"chol_{tab}")
     with col2:
-        hdl = st.number_input("HDL Cholesterol", 20, 100, 50, key=f"hdl_{tab}")
-        ldl = st.number_input("LDL Cholesterol", 50, 300, 100, key=f"ldl_{tab}")
-        triglycerides = st.number_input("Triglycerides", 50, 500, 150, key=f"trig_{tab}")
-        insulin = st.number_input("Insulin Level", 0.0, 300.0, 10.0, key=f"insulin_{tab}")
-        glucose_post = st.number_input("Postprandial Glucose", 50, 400, 140, key=f"glu_post_{tab}")
-        heart_rate = st.number_input("Heart Rate", 40, 150, 75, key=f"hr_{tab}")
-        waist_hip = st.number_input("Waist-to-Hip Ratio", 0.5, 1.5, 0.85, key=f"whr_{tab}")
+        hdl     = st.number_input("HDL Cholesterol", 20, 100, 55,  key=f"hdl_{tab}")
+        ldl     = st.number_input("LDL Cholesterol", 50, 300, 110, key=f"ldl_{tab}")
+        trig    = st.number_input("Triglycerides", 50, 500, 140,   key=f"trig_{tab}")
+        insulin = st.number_input("Insulin Level", 0.0, 300.0, 8.0, key=f"ins_{tab}")
+        glu_post= st.number_input("Postprandial Glucose", 50, 400, 130, key=f"gpost_{tab}")
+        hr      = st.number_input("Heart Rate", 40, 150, 72,       key=f"hr_{tab}")
+        whr     = st.number_input("Waist-Hip Ratio", 0.5, 1.5, 0.85, key=f"whr_{tab}")
 
     col3, col4 = st.columns(2)
     with col3:
-        gender = st.selectbox("Gender", ["Male", "Female"], key=f"gender_{tab}")
-        smoking = st.selectbox("Smoking Status", ["Never", "Former", "Current"], key=f"smoke_{tab}")
-        education = st.selectbox("Education Level", ["Highschool", "Bachelor", "Master", "PhD"], key=f"edu_{tab}")
-        ethnicity = st.selectbox("Ethnicity", ["Asian", "White", "Hispanic", "Black", "Other"], key=f"eth_{tab}")
+        gender     = st.selectbox("Gender", ["Female", "Male"],  key=f"gen_{tab}")
+        smoking    = st.selectbox("Smoking", ["Current", "Former", "Never"], key=f"smk_{tab}")
+        education  = st.selectbox("Education", ["Bachelor", "Highschool", "Master", "PhD"], key=f"edu_{tab}")
+        ethnicity  = st.selectbox("Ethnicity", ["Asian", "Black", "Hispanic", "Other", "White"], key=f"eth_{tab}")
     with col4:
-        income = st.selectbox("Income Level", ["Low", "Lower-Middle", "Middle", "Upper-Middle", "High"],key=f"income_{tab}")
-        employment = st.selectbox("Employment Status", ["Employed", "Unemployed", "Retired", "Student"],key=f"emp_{tab}")
-        family_history = st.selectbox("Family History of Diabetes", [0, 1],key=f"fam_{tab}")
-        hypertension = st.selectbox("Hypertension History", [0, 1],key=f"hyper_{tab}")
-        cardio = st.selectbox("Cardiovascular History", [0, 1], key=f"cardio_{tab}")
+        income     = st.selectbox("Income", ["High", "Low", "Lower-Middle", "Middle", "Upper-Middle"], key=f"inc_{tab}")
+        employment = st.selectbox("Employment", ["Employed", "Retired", "Student", "Unemployed"], key=f"emp_{tab}")
+        family_h   = st.selectbox("Family History Diabetes", [0, 1], key=f"fam_{tab}")
+        hyper      = st.selectbox("Hypertension History", [0, 1],    key=f"hyp_{tab}")
+        cardio     = st.selectbox("Cardiovascular History", [0, 1],  key=f"car_{tab}")
 
     col5, col6 = st.columns(2)
     with col5:
-        alcohol = st.number_input("Alcohol per Week", 0, 30, 2, key=f"alc_{tab}")
-        activity = st.number_input("Physical Activity (mins/week)", 0, 600, 150, key=f"act_{tab}")
-        diet = st.number_input("Diet Score", 0.0, 10.0, 5.0, key=f"diet_{tab}")
+        alcohol  = st.number_input("Alcohol/Week", 0, 30, 1,     key=f"alc_{tab}")
+        activity = st.number_input("Activity mins/week", 0, 600, 150, key=f"act_{tab}")
+        diet     = st.number_input("Diet Score", 0.0, 10.0, 5.0, key=f"diet_{tab}")
     with col6:
-        sleep = st.number_input("Sleep Hours/Day", 3.0, 12.0, 7.0, key=f"sleep_{tab}")
-        screen = st.number_input("Screen Time Hours/Day", 0.0, 16.0, 6.0, key=f"screen_{tab}")
+        sleep    = st.number_input("Sleep hrs/day", 3.0, 12.0, 7.0,  key=f"slp_{tab}")
+        screen   = st.number_input("Screen hrs/day", 0.0, 16.0, 5.0, key=f"scr_{tab}")
 
-    # Encode categoricals the same way as training
-    from sklearn.preprocessing import LabelEncoder
-    gender_enc = 1 if gender == "Male" else 0
-    smoke_map = {"Never": 2, "Former": 1, "Current": 0}
-    edu_map = {"Highschool": 1, "Bachelor": 0, "Master": 2, "PhD": 3}
-    eth_map = {"Asian": 0, "White": 4, "Hispanic": 2, "Black": 1, "Other": 3}
-    income_map = {"Low": 1, "Lower-Middle": 2, "Middle": 3, "Upper-Middle": 4, "High": 0}
-    emp_map = {"Employed": 0, "Unemployed": 3, "Retired": 2, "Student": 1}
+    # ── Encode exactly as training ─────────────────
+    gender_enc     = ["Female", "Male"].index(gender)
+    smoking_enc    = ["Current", "Former", "Never"].index(smoking)
+    education_enc  = ["Bachelor", "Highschool", "Master", "PhD"].index(education)
+    ethnicity_enc  = ["Asian", "Black", "Hispanic", "Other", "White"].index(ethnicity)
+    income_enc     = ["High", "Low", "Lower-Middle", "Middle", "Upper-Middle"].index(income)
+    employment_enc = ["Employed", "Retired", "Student", "Unemployed"].index(employment)
 
-    return [age, gender_enc, eth_map[ethnicity], edu_map[education],
-            income_map[income], emp_map[employment], smoke_map[smoking],
-            alcohol, activity, diet, sleep, screen,
-            family_history, hypertension, cardio,
-            bmi, waist_hip, systolic_bp, diastolic_bp, heart_rate,
-            cholesterol, hdl, ldl, triglycerides,
-            glucose, glucose_post, insulin, hba1c]
+    # ── Build input in EXACT feature order ─────────
+    input_dict = {
+        'age': age, 'gender': gender_enc,
+        'ethnicity': ethnicity_enc, 'education_level': education_enc,
+        'income_level': income_enc, 'employment_status': employment_enc,
+        'smoking_status': smoking_enc,
+        'alcohol_consumption_per_week': alcohol,
+        'physical_activity_minutes_per_week': activity,
+        'diet_score': diet, 'sleep_hours_per_day': sleep,
+        'screen_time_hours_per_day': screen,
+        'family_history_diabetes': family_h,
+        'hypertension_history': hyper,
+        'cardiovascular_history': cardio,
+        'bmi': bmi, 'waist_to_hip_ratio': whr,
+        'systolic_bp': sys_bp, 'diastolic_bp': dia_bp,
+        'heart_rate': hr, 'cholesterol_total': chol,
+        'hdl_cholesterol': hdl, 'ldl_cholesterol': ldl,
+        'triglycerides': trig, 'glucose_fasting': glucose,
+        'glucose_postprandial': glu_post,
+        'insulin_level': insulin, 'hba1c': hba1c
+    }
 
-# --- Tab 1: Binary Classification ---
+    # Return as DataFrame with correct column order
+    return pd.DataFrame([input_dict])[feature_cols]
+
+# ── Tab 1: Binary ──────────────────────────────────
 with tab1:
-    st.header("🔍 Will this patient be diagnosed with Diabetes?")
-    inputs = get_inputs("binary")
-    if st.button("Predict Diagnosis", key="btn_binary"):
-        pred = binary_model.predict([inputs])[0]
-        prob = binary_model.predict_proba([inputs])[0][1]
+    st.header("Will this patient be Diabetic?")
+    with st.form("form_binary"):
+        inputs = get_inputs("binary")
+        submitted = st.form_submit_button("🔍 Predict")
+    if submitted:
+        pred = binary_model.predict(inputs)[0]
+        prob = binary_model.predict_proba(inputs)[0][1]
         if pred == 1:
             st.error(f"⚠️ Diabetic: YES  |  Confidence: {prob*100:.1f}%")
         else:
             st.success(f"✅ Diabetic: NO  |  Confidence: {(1-prob)*100:.1f}%")
 
-# --- Tab 2: Multiclass Classification ---
+# ── Tab 2: Multiclass ──────────────────────────────
 with tab2:
-    st.header("🔬 What stage of Diabetes?")
-    inputs = get_inputs("multi")
-    if st.button("Predict Stage", key="btn_multi"):
-        pred = multi_model.predict([inputs])[0]
-        st.success(f"📋 Predicted Stage: **{stage_labels[pred]}**")
+    st.header("What Diabetes Stage?")
+    with st.form("form_multi"):
+        inputs = get_inputs("multi")
+        submitted2 = st.form_submit_button("🔬 Predict Stage")
+    if submitted2:
+        pred2 = multi_model.predict(inputs)[0]
+        stage = stage_encoder.classes_[pred2]
+        st.success(f"📋 Predicted Stage: **{stage}**")
 
-# --- Tab 3: Regression ---
+# ── Tab 3: Regression ──────────────────────────────
 with tab3:
-    st.header("📈 What is the Diabetes Risk Score?")
-    inputs = get_inputs("reg")
-    if st.button("Predict Risk Score", key="btn_reg"):
-        pred = reg_model.predict([inputs])[0]
-        st.metric("Risk Score", f"{pred:.2f} / 70")
-        st.progress(min(pred / 70.0, 1.0))
-        if pred < 20:
+    st.header("What is the Risk Score?")
+    with st.form("form_reg"):
+        inputs = get_inputs("reg")
+        submitted3 = st.form_submit_button("📈 Predict Score")
+    if submitted3:
+        score = reg_model.predict(inputs)[0]
+        st.metric("Risk Score", f"{score:.2f} / 70")
+        st.progress(min(score / 70.0, 1.0))
+        if score < 20:
             st.success("🟢 Low Risk")
-        elif pred < 40:
+        elif score < 40:
             st.warning("🟡 Moderate Risk")
         else:
             st.error("🔴 High Risk")
