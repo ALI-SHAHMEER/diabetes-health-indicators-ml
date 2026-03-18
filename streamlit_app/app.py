@@ -38,25 +38,14 @@ def get_inputs(tab):
     with col3:
         gender = st.selectbox("Gender", ["Male", "Female"], key=f"gender_{tab}")
         smoking = st.selectbox("Smoking Status", ["Never", "Former", "Current"], key=f"smoke_{tab}")
-        education = st.selectbox("Education Level", 
-                                  ["Highschool", "Bachelor", "Master", "PhD"], 
-                                  key=f"edu_{tab}")
-        ethnicity = st.selectbox("Ethnicity", 
-                                  ["Asian", "White", "Hispanic", "Black", "Other"], 
-                                  key=f"eth_{tab}")
+        education = st.selectbox("Education Level", ["Highschool", "Bachelor", "Master", "PhD"], key=f"edu_{tab}")
+        ethnicity = st.selectbox("Ethnicity", ["Asian", "White", "Hispanic", "Black", "Other"], key=f"eth_{tab}")
     with col4:
-        income = st.selectbox("Income Level", 
-                               ["Low", "Lower-Middle", "Middle", "Upper-Middle", "High"], 
-                               key=f"income_{tab}")
-        employment = st.selectbox("Employment Status", 
-                                   ["Employed", "Unemployed", "Retired", "Student"], 
-                                   key=f"emp_{tab}")
-        family_history = st.selectbox("Family History of Diabetes", [0, 1], 
-                                       key=f"fam_{tab}")
-        hypertension = st.selectbox("Hypertension History", [0, 1], 
-                                     key=f"hyper_{tab}")
-        cardio = st.selectbox("Cardiovascular History", [0, 1], 
-                               key=f"cardio_{tab}")
+        income = st.selectbox("Income Level", ["Low", "Lower-Middle", "Middle", "Upper-Middle", "High"],key=f"income_{tab}")
+        employment = st.selectbox("Employment Status", ["Employed", "Unemployed", "Retired", "Student"],key=f"emp_{tab}")
+        family_history = st.selectbox("Family History of Diabetes", [0, 1],key=f"fam_{tab}")
+        hypertension = st.selectbox("Hypertension History", [0, 1],key=f"hyper_{tab}")
+        cardio = st.selectbox("Cardiovascular History", [0, 1], key=f"cardio_{tab}")
 
     col5, col6 = st.columns(2)
     with col5:
