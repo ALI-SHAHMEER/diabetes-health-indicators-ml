@@ -3,7 +3,6 @@ import joblib
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
-<<<<<<< HEAD
 # Cache models — loaded only once
 @st.cache_resource
 def load_models():
@@ -21,52 +20,6 @@ tab1, tab2, tab3 = st.tabs(["Binary", "Stage", "Risk Score"])
 
 stage_labels = {0: 'No Diabetes', 1: 'Pre-Diabetes',
                 2: 'Type 1', 3: 'Type 2', 4: 'Gestational'}
-=======
-# ── Load models ───────────────────────────────────────────────────────────────
-binary_model = joblib.load('/home/ali/AI/diabetes-health-indicators-ml/models/binary_model.joblib')
-multi_model  = joblib.load('/home/ali/AI/diabetes-health-indicators-ml/models/multiclass_model.joblib')
-reg_model    = joblib.load('/home/ali/AI/diabetes-health-indicators-ml/models/regression_model.joblib')
-
-# ── Stage labels (LabelEncoder fits alphabetically) ───────────────────────────
-# Correct order: Gestational=0, No Diabetes=1, Pre-Diabetes=2, Type 1=3, Type 2=4
-stage_labels = {
-    0: 'Gestational',
-    1: 'No Diabetes',
-    2: 'Pre-Diabetes',
-    3: 'Type 1',
-    4: 'Type 2',
-}
-
-# ── Feature columns (must match training order exactly) ───────────────────────
-CAT_COLS = ["gender", "ethnicity", "education_level",
-            "income_level", "employment_status", "smoking_status"]
-NUM_COLS = ["age", "alcohol_consumption_per_week",
-            "physical_activity_minutes_per_week", "diet_score",
-            "sleep_hours_per_day", "screen_time_hours_per_day",
-            "family_history_diabetes", "hypertension_history", "cardiovascular_history",
-            "bmi", "waist_to_hip_ratio", "systolic_bp", "diastolic_bp", "heart_rate",
-            "cholesterol_total", "hdl_cholesterol", "ldl_cholesterol", "triglycerides",
-            "glucose_fasting", "glucose_postprandial", "insulin_level", "hba1c"]
-
-# ── Encode categorical values the same way training did ───────────────────────
-# LabelEncoder assigns integer codes alphabetically per column
-CAT_CLASSES = {
-    "gender":           ["Female", "Male", "Other"],
-    "ethnicity":        ["Asian", "Black", "Hispanic", "Other", "White"],
-    "education_level":  ["Graduate", "Highschool", "No formal", "Postgraduate"],
-    "income_level":     ["High", "Low", "Lower-Middle", "Middle", "Upper-Middle"],
-    "employment_status":["Employed", "Retired", "Student", "Unemployed"],
-    "smoking_status":   ["Current", "Former", "Never"],
-}
-
-def encode_cat(col, value):
-    return CAT_CLASSES[col].index(value)
-
-# ── Single input form in sidebar (called once, shared across all tabs) ─────────
-def get_inputs():
-    st.sidebar.header("🧬 Patient Input")
-    st.sidebar.markdown("---")
->>>>>>> fca2819 (Modifying app.py)
 
     st.sidebar.subheader("👤 Demographics")
     gender   = st.sidebar.selectbox("Gender",           ["Male", "Female", "Other"])
@@ -141,7 +94,6 @@ tab1, tab2, tab3 = st.tabs([
 # ── Tab 1: Binary Classification ──────────────────────────────────────────────
 with tab1:
     st.header("Will this patient be diagnosed with Diabetes?")
-<<<<<<< HEAD
     with st.form("binary_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -172,23 +124,10 @@ with tab1:
             st.error(f"⚠️ Diabetic: YES  |  Confidence: {prob*100:.1f}%")
         else:
             st.success(f"✅ Diabetic: NO  |  Confidence: {(1-prob)*100:.1f}%")
-=======
-    if st.button("Predict Diagnosis", key="btn_binary"):  # unique key required
-        pred  = binary_model.predict([inputs])[0]
-        proba = binary_model.predict_proba([inputs])[0]
-        if pred == 1:
-            st.error(f"⚠️ Diabetic: **YES**  (confidence: {proba[1]*100:.1f}%)")
-        else:
-            st.success(f"✅ Diabetic: **NO**  (confidence: {proba[0]*100:.1f}%)")
-        col1, col2 = st.columns(2)
-        col1.metric("No Diabetes Probability", f"{proba[0]*100:.1f}%")
-        col2.metric("Diabetic Probability",    f"{proba[1]*100:.1f}%")
->>>>>>> fca2819 (Modifying app.py)
 
 # ── Tab 2: Multiclass Stage ───────────────────────────────────────────────────
 with tab2:
     st.header("What stage of Diabetes?")
-<<<<<<< HEAD
     with st.form("multi_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -209,25 +148,10 @@ with tab2:
                    sys_bp2, dia_bp2, chol2, hdl2]
         pred2 = multi_model.predict([inputs2])[0]
         st.success(f"📋 Predicted Stage: **{stage_labels[pred2]}**")
-=======
-    if st.button("Predict Stage", key="btn_stage"):  # unique key required
-        pred  = multi_model.predict([inputs])[0]
-        label = stage_labels[pred]
-        st.success(f"🔬 Predicted Stage: **{label}**")
-        if hasattr(multi_model, "predict_proba"):
-            probas = multi_model.predict_proba([inputs])[0]
-            prob_df = pd.DataFrame({
-                "Stage":       [stage_labels[i] for i in range(len(probas))],
-                "Probability": probas,
-            }).sort_values("Probability", ascending=False).reset_index(drop=True)
-            st.dataframe(prob_df.style.format({"Probability": "{:.4f}"}),
-                         use_container_width=True)
->>>>>>> fca2819 (Modifying app.py)
 
 # ── Tab 3: Risk Score Regression ──────────────────────────────────────────────
 with tab3:
     st.header("What is the Diabetes Risk Score?")
-<<<<<<< HEAD
     with st.form("reg_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -252,15 +176,6 @@ with tab3:
         if pred3 < 20:
             st.success("🟢 Low Risk")
         elif pred3 < 40:
-=======
-    if st.button("Predict Risk Score", key="btn_risk"):  # unique key required
-        pred = reg_model.predict([inputs])[0]
-        st.metric("Risk Score", f"{pred:.2f}")
-        st.progress(float(min(pred / 70.0, 1.0)))
-        if pred < 20:
-            st.success("🟢 Low Risk")
-        elif pred < 35:
->>>>>>> fca2819 (Modifying app.py)
             st.warning("🟡 Moderate Risk")
         else:
             st.error("🔴 High Risk")
