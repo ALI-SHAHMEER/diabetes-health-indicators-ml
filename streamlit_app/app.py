@@ -4,9 +4,9 @@ import joblib
 import numpy as np
 
 # ── Load models ───────────────────────────────────────────────────────────────
-binary_model = joblib.load("/home/ali/AI/diabetes-health-indicators-ml/models/binary_model.joblib")
-multi_model  = joblib.load("/home/ali/AI/diabetes-health-indicators-ml/models/multiclass_model.joblib")
-reg_model    = joblib.load("/home/ali/AI/diabetes-health-indicators-ml/models/regression_model.joblib")
+binary_model = joblib.load("models/binary_model.joblib")
+multi_model  = joblib.load("models/multiclass_model.joblib")
+reg_model    = joblib.load("models/regression_model.joblib")
 
 # ── Stage label mapping (LabelEncoder encodes alphabetically) ─────────────────
 stage_labels = {
